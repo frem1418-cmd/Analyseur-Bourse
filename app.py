@@ -2,10 +2,36 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-# --- CONFIGURATION DE LA PAGE ---
-st.set_page_config(page_title="Analyse Fondamentale Multi-Marchés", layout="wide")
+# --- 1. CONFIGURATION & SÉCURITÉ ---
+st.set_page_config(page_title="Analyseur Bourse Privé", layout="wide")
 
-# --- STYLE CSS ---
+# Définis ton mot de passe ici
+PASSWORD_CIBLE = "Plha649" 
+
+def check_password():
+    """Retourne True si l'utilisateur a saisi le bon mot de passe."""
+    if "password_correct" not in st.session_state:
+        st.session_state["password_correct"] = False
+
+    if st.session_state["password_correct"]:
+        return True
+
+    # Affichage du formulaire de login
+    st.title("🔒 Accès Restreint")
+    pwd = st.text_input("Veuillez saisir le code d'accès :", type="password")
+    if st.button("Se connecter"):
+        if pwd == PASSWORD_CIBLE:
+            st.session_state["password_correct"] = True
+            st.rerun()
+        else:
+            st.error("❌ Mot de passe incorrect.")
+    return False
+
+# Si le mot de passe n'est pas bon, on arrête l'exécution ici
+if not check_password():
+    st.stop()
+
+# --- 2. STYLE CSS ---
 st.markdown("""
     <style>
     .section-box { background-color: #ffffff; padding: 20px; border-radius: 12px; border: 1px solid #e0e0e0; margin-bottom: 25px; }
@@ -22,18 +48,13 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- LÉGENDE DES EXTENSIONS ---
-with st.expander("📍 Guide des Tickers (Paris, Amsterdam, Francfort, Madrid...)"):
+# --- 3. LÉGENDE & LOGIQUE ---
+with st.expander("📍 Guide des Tickers (Extensions Marchés)"):
     st.markdown("""
     <div class="legend-box">
     <b>Ajoutez l'extension selon la place boursière :</b><br>
-    • <b>.PA</b> : Paris (Euronext) - ex: <i>AI.PA (Air Liquide)</i><br>
-    • <b>.AS</b> : Amsterdam (Euronext) - ex: <i>ADYEN.AS, ASML.AS</i><br>
-    • <b>.DE</b> : Francfort / XETRA (ETR) - ex: <i>SAP.DE, BMW.DE</i><br>
-    • <b>.MC</b> : Madrid (BME) - ex: <i>IBE.MC (Iberdrola)</i><br>
-    • <b>.MI</b> : Milan (FRA) - ex: <i>RACE.MI (Ferrari)</i><br>
-    • <b>.BR</b> : Bruxelles - ex: <i>ABI.BR (Anheuser-Busch)</i><br>
-    • <b>Sans extension</b> : USA (NYSE/NASDAQ) - ex: <i>AAPL, TSLA</i>
+    • <b>.PA</b> : Paris | • <b>.AS</b> : Amsterdam | • <b>.DE</b> : Allemagne | • <b>.MC</b> : Madrid | • <b>.MI</b> : Milan<br>
+    • <b>Sans extension</b> : USA (ex: AAPL, NVDA)
     </div>
     """, unsafe_allow_html=True)
 
@@ -46,10 +67,8 @@ def get_data(ticker_str):
         price = info.get("currentPrice", 0.0)
         sh_out = info.get("sharesOutstanding", 1)
         
-        # Croissance BNA (Analystes)
         g_bna_auto = (info.get("earningsGrowth", 0.05) or 0.05) * 100
         
-        # FCF et Croissance (CAGR 3 ans)
         fcf_series = cf.loc["Free Cash Flow"] if "Free Cash Flow" in cf.index else pd.Series()
         v_fcf_curr = fcf_series.iloc[0] / sh_out if not fcf_series.empty else price / 20
         g_fcf_auto = 5.0
@@ -73,8 +92,8 @@ def get_data(ticker_str):
         }
     except: return None
 
-# --- INTERFACE ---
-ticker = st.text_input("Saisir le Ticker", "ADYEN.AS").upper()
+# --- 4. INTERFACE ---
+ticker = st.text_input("Saisir le Ticker", "AI.PA").upper()
 d = get_data(ticker)
 
 if d:
@@ -84,7 +103,7 @@ if d:
     with col_main:
         st.title(f"🏢 {d['name']}")
 
-        # 1. MODÈLE BNA
+        # MODÈLE BNA
         st.markdown('<div class="section-box">', unsafe_allow_html=True)
         st.subheader("📈 Modèle BNA")
         b1, b2, b3 = st.columns(3)
@@ -98,7 +117,7 @@ if d:
         st.table(pd.DataFrame({"Année": ans, "PRIX (BNA)": projs_bna}).set_index("Année").T)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # 2. MODÈLE FCF
+        # MODÈLE FCF
         st.markdown('<div class="section-box">', unsafe_allow_html=True)
         st.subheader("💸 Modèle FCF")
         f1, f2, f3 = st.columns(3)
@@ -112,7 +131,7 @@ if d:
         st.table(pd.DataFrame({"Année": ans, "PRIX (FCF)": projs_fcf}).set_index("Année").T)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # 3. MODÈLE DIVIDENDES
+        # MODÈLE DIVIDENDES
         st.markdown('<div class="section-box">', unsafe_allow_html=True)
         st.subheader("💰 Modèle Dividendes")
         d1, d2 = st.columns(2)
@@ -125,7 +144,7 @@ if d:
         st.table(pd.DataFrame({"Année": ans, "DIV. ESTIMÉ": projs_div, "YIELD ON COST (%)": yoc}).set_index("Année").T)
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # 4. SYNTHÈSE
+        # SYNTHÈSE
         st.write("---")
         st.subheader("🎯 Juste Prix d'achat (Actualisé 10%)")
         va = ((projs_bna[0] + projs_fcf[0]) / 2) / 1.10
@@ -134,12 +153,7 @@ if d:
             pf = va * (1 - m)
             color = "#28a745" if d['price'] < pf else "#dc3545"
             with c_res[i]:
-                st.markdown(f"""
-                <div class="decote-card" style="border-top: 5px solid {color}">
-                    <div class="stat-label">Décote {int(m*100)}%</div>
-                    <div style="font-size:22px; font-weight:bold; color:{color};">{pf:.2f} {d['currency']}</div>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f'<div class="decote-card" style="border-top: 5px solid {color}"><div class="stat-label">Décote {int(m*100)}%</div><div style="font-size:22px; font-weight:bold; color:{color};">{pf:.2f} {d['currency']}</div></div>', unsafe_allow_html=True)
 
     with col_side:
         st.markdown(f"<span class='ticker-tag'>{ticker}</span>", unsafe_allow_html=True)
