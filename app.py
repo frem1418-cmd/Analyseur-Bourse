@@ -45,7 +45,7 @@ st.markdown("""
     .price-large { font-size: 52px; font-weight: 800; line-height: 1; margin: 10px 0; color: #1E1E1E; }
     .stat-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
     .stat-label { color: #888; text-transform: uppercase; font-size: 11px; font-weight: 600; }
-    .stat-value { font-weight: bold; color: #333; text-align: right; margin-left: 10px; }
+    .stat-value { font-weight: bold; color: #333; text-align: right; }
     .decote-card { text-align: center; padding: 20px; border-radius: 10px; background: #fff; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     
     .range-container { margin-top: 20px; }
@@ -87,7 +87,7 @@ def get_data(ticker_str):
             "beta": info.get("beta", "N/A"),
             "price": price,
             "currency": info.get("currency", "EUR"),
-            "eps_ttm": t_eps if t_eps > 0 else 1.0,
+            "eps_ttm": t_eps,
             "per_ttm": info.get("trailingPE", 0.0),
             "per_fwd": info.get("forwardPE", 0.0),
             "peg": info.get("pegRatio", "-"),
@@ -106,7 +106,17 @@ def get_data(ticker_str):
     except: return None
 
 # --- 4. INTERFACE ---
-ticker = st.text_input("SYMBOLE YAHOO (ex: AI.PA, MC.PA)", "AI.PA").upper()
+# Menu réduit pour les suffixes
+with st.expander("ℹ️ Suffixe des tickers (Exemples : ETR:AOF, AMS:ASML...)"):
+    st.markdown("""
+        * **Paris :** `.PA` (ex: `AI.PA`, `TTE.PA`)
+        * **Xetra (All) :** `.DE` (ex: `SAP.DE`, `2FE.DE`)
+        * **Amsterdam :** `.AS` (ex: `ASML.AS`)
+        * **USA :** Aucun suffixe (ex: `AAPL`, `MSFT`)
+        * **Londres :** `.L` | **Milan :** `.MI` | **Madrid :** `.MC`
+    """)
+
+ticker = st.text_input("RECHERCHER UNE ACTION", "AI.PA").upper()
 d = get_data(ticker)
 
 if d:
@@ -178,12 +188,11 @@ if d:
         st.write("---")
         def s_row(l, v): st.markdown(f"<div class='stat-row'><span class='stat-label'>{l}</span><span class='stat-value'>{v}</span></div>", unsafe_allow_html=True)
         
-        # Capitalisation puis Secteur/Industrie juste en dessous
         s_row("CAPITALISATION", f"{d['mcap']/1e9:.2f} Md")
         s_row("SECTEUR", d['sector'])
         s_row("INDUSTRIE", d['industry'])
         
-        st.write("") # Petit espace visuel
+        st.write("") 
         s_row("PER (TTM)", f"{d['per_ttm']:.2f}x")
         s_row("PER (FWD)", f"{d['per_fwd']:.2f}x")
         s_row("RDT DIVIDENDE", f"{d['div_yield']:.2f} %")
@@ -198,4 +207,4 @@ if d:
         """, unsafe_allow_html=True)
 
 else:
-    st.error("Données Yahoo introuvables ou ticker incorrect.")
+    st.error("Données Yahoo introuvables. Vérifiez le symbole saisi.")
