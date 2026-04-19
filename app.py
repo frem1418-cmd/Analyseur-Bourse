@@ -2,29 +2,6 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-# --- 1. CONFIGURATION & SÉCURITÉ ---
-st.set_page_config(page_title="Analyseur Bourse Expert", layout="wide")
-
-PASSWORD_CIBLE = "Plha649" 
-
-def check_password():
-    if "password_correct" not in st.session_state:
-        st.session_state["password_correct"] = False
-    if st.session_state["password_correct"]:
-        return True
-    st.title("🔒 Accès Restreint")
-    pwd = st.text_input("Veuillez saisir le code d'accès :", type="password")
-    if st.button("Se connecter"):
-        if pwd == PASSWORD_CIBLE:
-            st.session_state["password_correct"] = True
-            st.rerun()
-        else:
-            st.error("❌ Mot de passe incorrect.")
-    return False
-
-if not check_password():
-    st.stop()
-
 # --- 2. LOGIQUE MÉTIER ---
 def get_sector_per(sector):
     per_map = {
